@@ -43,17 +43,17 @@ static void errorline() {
     }
   }
 
-  char path[50];
-  for(int i = 0; i < 50; i++)
+  char path[1000];
+  for(int i = 0; i < 1000; i++)
     path[i] = 0;
   int path_len = 0;
   for(int i = 0;; i++) {
-    if(!(current->dir)[current->file[fault_file].dir][i])break;
+    if((current->dir)[current->file[fault_file].dir][i] == '\0')break;
     path[path_len++] = (current->dir)[current->file[fault_file].dir][i];
   }
   path[path_len++] = '/';
   for(int i = 0;; i++) {
-    if(!current->file[fault_file].file[i])break;
+    if(current->file[fault_file].file[i] == '\0')break;
     path[path_len++] = current->file[fault_file].file[i];
   }
 
@@ -77,7 +77,7 @@ static void errorline() {
       fault_source_code_line--;
     }
   }
-
+  return;
 }
 
 

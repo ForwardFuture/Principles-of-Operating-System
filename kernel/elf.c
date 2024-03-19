@@ -286,7 +286,7 @@ void save_debug_line(elf_ctx elfloader) {
         }
         //sprint("%d\n", len);
 
-        char str[20];
+        static char str[20];
         // remember to initialize
         memset(str, 0, 20);
         elf_fpread(&elfloader, (void*)(str), len, straddr + stroffset);
