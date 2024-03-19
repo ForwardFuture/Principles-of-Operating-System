@@ -25,31 +25,96 @@ static void handle_timer() {
 }
 
 //
+// point out errorline
+//
+static void errorline() {
+
+  sprint("Runtime error at ");
+
+  uint64 fault_code_segment = read_csr(mepc);
+  uint64 fault_source_code_line = 0;
+  uint64 fault_file = 0;
+
+  for(int i = 0;; i++) {
+    if(fault_code_segment == current->line[i].addr) {
+      fault_source_code_line = current->line[i].line;
+      fault_file = current->line[i].file;
+      break;
+    }
+  }
+
+  char path[50];
+  for(int i = 0; i < 50; i++)
+    path[i] = 0;
+  int path_len = 0;
+  for(int i = 0;; i++) {
+    if(!(current->dir)[current->file[fault_file].dir][i])break;
+    path[path_len++] = (current->dir)[current->file[fault_file].dir][i];
+  }
+  path[path_len++] = '/';
+  for(int i = 0;; i++) {
+    if(!current->file[fault_file].file[i])break;
+    path[path_len++] = current->file[fault_file].file[i];
+  }
+
+  sprint("%s:%lld\n", path, fault_source_code_line);
+
+  char buf[5000];
+  int siz = 5000;
+  spike_file_t* fp = spike_file_open(path, O_RDONLY, 0);
+  spike_file_read(fp, buf, siz);
+  spike_file_close(fp);
+  
+  for(int i = 0; i < siz; i++) {
+    if(fault_source_code_line == 1) {
+      if(buf[i] == '\n') {
+        sprint("\n");
+        break;
+      }
+      else sprint("%c", buf[i]);
+    }
+    else if(buf[i] == '\n') {
+      fault_source_code_line--;
+    }
+  }
+
+}
+
+
+//
 // handle_mtrap calls a handling function according to the type of a machine mode interrupt (trap).
 //
 void handle_mtrap() {
   uint64 mcause = read_csr(mcause);
   switch (mcause) {
     case CAUSE_MTIMER:
+      errorline();
       handle_timer();
       break;
     case CAUSE_FETCH_ACCESS:
+      errorline();
       handle_instruction_access_fault();
       break;
     case CAUSE_LOAD_ACCESS:
+      errorline();
       handle_load_access_fault();
+      break;
     case CAUSE_STORE_ACCESS:
+      errorline();
       handle_store_access_fault();
       break;
     case CAUSE_ILLEGAL_INSTRUCTION:
       // TODO (lab1_2): call handle_illegal_instruction to implement illegal instruction
       // interception, and finish lab1_2.
+      errorline();
       handle_illegal_instruction();
       break;
     case CAUSE_MISALIGNED_LOAD:
+      errorline();
       handle_misaligned_load();
       break;
     case CAUSE_MISALIGNED_STORE:
+      errorline();
       handle_misaligned_store();
       break;
 
