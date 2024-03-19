@@ -249,6 +249,73 @@ static size_t parse_args(arg_buf *arg_bug_msg) {
 }
 
 //
+// initialize member variable(dir, file, line) of process
+//
+void save_debug_line(elf_ctx elfloader) {
+
+    uint64 strtab = elfloader.ehdr.shoff + elfloader.ehdr.shstrndx * elfloader.ehdr.shentsize;
+    uint64 straddr;
+    elf_fpread(&elfloader, (void*)(&straddr), 8, strtab + 24);
+    //sprint("%d\n", straddr);
+
+    uint32 stroffset;
+
+    //sprint("%d\n", elfloader.ehdr.shoff);
+    //sprint("%d\n", elfloader.ehdr.phoff);
+    //sprint("%d\n", elfloader.ehdr.shnum);
+    //sprint("%d\n",elfloader.ehdr.shentsize);
+    //sprint("%d\n",sizeof(elf_sect_header));
+
+    uint64 debug_header_addr = 0;
+
+    for(int i = 1; i < elfloader.ehdr.shnum; i++) {
+
+        if(i == elfloader.ehdr.shstrndx)continue;
+
+        uint64 addr = elfloader.ehdr.shoff + i * elfloader.ehdr.shentsize;
+        elf_fpread(&elfloader, (void*)(&stroffset), 4, addr);
+
+        //sprint("%d\n", stroffset);
+        
+        int len = 0;
+        char ch;
+        while(1) {
+            elf_fpread(&elfloader, (void*)(&ch), 1, straddr + stroffset + len);
+            if(!ch)break;
+            len++;
+        }
+        //sprint("%d\n", len);
+
+        char str[20];
+        // remember to initialize
+        memset(str, 0, 20);
+        elf_fpread(&elfloader, (void*)(str), len, straddr + stroffset);
+        //sprint("%s\n", str);
+        
+        if(strcmp(str, ".debug_line") == 0) {
+            debug_header_addr = addr;
+            break;
+        }
+        
+        //sprint("%d\n",i);
+
+    }
+
+    //sprint("%lld\n", debug_header_addr);
+    uint64 debug_addr;
+    uint64 debug_size;
+    elf_fpread(&elfloader, (void*)(&debug_addr), 8, debug_header_addr + 24);
+    elf_fpread(&elfloader, (void*)(&debug_size), 8, debug_header_addr + 32);
+    //sprint("%d\n",debug_addr);
+    //sprint("%d\n",debug_size);
+
+    static char debug_content[10000];
+    elf_fpread(&elfloader, (void*)(debug_content), debug_size, debug_addr);
+    
+    make_addr_line(&elfloader, debug_content, debug_size);
+}
+
+//
 // load the elf of user application, by using the spike file interface.
 //
 void load_bincode_from_host_elf(process *p) {
@@ -282,6 +349,10 @@ void load_bincode_from_host_elf(process *p) {
 
   // close the host spike file
   spike_file_close( info.f );
+
+
+  save_debug_line(elfloader);
+
 
   sprint("Application program entry point (virtual address): 0x%lx\n", p->trapframe->epc);
 }
