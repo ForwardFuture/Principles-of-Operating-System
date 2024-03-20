@@ -5,6 +5,7 @@
 #include "util/types.h"
 #include "kernel/riscv.h"
 #include "kernel/config.h"
+#include "kernel/sync_utils.h"
 #include "spike_interface/spike_utils.h"
 
 //
@@ -103,7 +104,7 @@ void m_start(uintptr_t hartid, uintptr_t dtb) {
     init_dtb(dtb);
   }
 
-  volatile int init_counter = 0;
+  static volatile int init_counter = 0;
   sync_barrier(&init_counter, NCPU);
 
   sprint("In m_start, hartid:%d\n", hartid);

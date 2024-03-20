@@ -27,7 +27,7 @@ process* current[NCPU] = {NULL};
 //
 void switch_to(process* proc) {
   assert(proc);
-  current = proc;
+  current[read_tp()] = proc;
 
   // write the smode_trap_vector (64-bit func. address) defined in kernel/strap_vector.S
   // to the stvec privilege register, such that trap handler pointed by smode_trap_vector
