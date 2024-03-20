@@ -1,6 +1,9 @@
 #ifndef _SYNC_UTILS_H_
 #define _SYNC_UTILS_H_
 
+//
+// this function will block process until all the processes run up here.
+//
 static inline void sync_barrier(volatile int *counter, int all) {
 
   int local;
