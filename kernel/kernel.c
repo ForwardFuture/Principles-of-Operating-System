@@ -45,6 +45,10 @@ void load_user_program(process *proc) {
   proc->pagetable = (pagetable_t)alloc_page();
   memset((void *)proc->pagetable, 0, PGSIZE);
 
+  // initialize free_block_header & used_block_header
+  proc->free_block_header = NULL;
+  proc->used_block_header = NULL;
+
   // allocate pages to both user-kernel stack and user app itself. added @lab2_1
   proc->kstack = (uint64)alloc_page() + PGSIZE;   //user kernel stack top
   uint64 user_stack = (uint64)alloc_page();       //phisical address of user stack bottom

@@ -64,3 +64,47 @@ void switch_to(process* proc) {
   // note, return_to_user takes two parameters @ and after lab2_1.
   return_to_user(proc->trapframe, user_satp);
 }
+
+//
+// Allocate a block
+//
+uint64 alloc_block(block* cur_block, block* pre_block, int alloc_memory) {
+
+  // rest of cur_block is still usable
+  if(cur_block->block_size > alloc_memory + sizeof(block)) {
+
+    block* rest_block = (block *)(cur_block->pa_addr + alloc_memory);
+    rest_block->block_size = cur_block->block_size - (alloc_memory + sizeof(block));
+    rest_block->va_addr = cur_block->va_addr + alloc_memory + sizeof(block);
+    rest_block->pa_addr = cur_block->pa_addr + alloc_memory + sizeof(block);
+    rest_block->nxt = cur_block->nxt;
+
+    cur_block->block_size = alloc_memory;
+
+    //sprint("%d\n", rest_block->block_size);
+    //sprint("%lx\n", pre_block);
+
+
+    if(pre_block != NULL) {
+      pre_block->nxt = rest_block;
+    }
+    else current->free_block_header = rest_block;
+
+    //sprint("%lx\n",current->free_block_header);
+
+  }
+  // rest or cur_block is not usable
+  else {
+    if(pre_block != NULL) {
+      pre_block->nxt = cur_block->nxt;
+    }
+    else current->free_block_header = cur_block->nxt;
+  }
+
+  cur_block->nxt = current->used_block_header;
+  current->used_block_header = cur_block;
+
+  //sprint("%lx\n", cur_block->va_addr);
+
+  return cur_block->va_addr;
+}
