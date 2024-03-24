@@ -50,6 +50,9 @@ void handle_mtimer_trap() {
 // stval: the virtual address that causes pagefault when being accessed.
 //
 void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
+
+  process* proc = current[read_tp()];
+
   sprint("handle_page_fault: %lx\n", stval);
   switch (mcause) {
     case CAUSE_STORE_PAGE_FAULT:
@@ -57,11 +60,8 @@ void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
       // dynamically increase application stack.
       // hint: first allocate a new physical page, and then, maps the new page to the
       // virtual address that causes the page fault.
-      void *pa = alloc_page();
-
-      int sym = map_pages(current->pagetable, ROUNDDOWN(stval, PGSIZE), PGSIZE, (uint64)pa, prot_to_type(PROT_READ | PROT_WRITE, 1));
-      
-      if(sym == -1)panic("map_pages fails due to lack of physical pages!\n");
+      if(map_pages(proc->pagetable, ROUNDDOWN(stval, PGSIZE), PGSIZE, (uint64)alloc_page(), 
+          prot_to_type(PROT_READ | PROT_WRITE, 1)) == -1)panic("map_pages fails due to lack of physical pages!\n");
       break;
     default:
       sprint("unknown page fault.\n");
@@ -78,9 +78,11 @@ void smode_trap_handler(void) {
   // we will consider other previous case in lab1_3 (interrupt).
   if ((read_csr(sstatus) & SSTATUS_SPP) != 0) panic("usertrap: not from user mode");
 
-  assert(current);
+  process *proc = current[read_tp()];
+
+  assert(proc);
   // save user process counter.
-  current->trapframe->epc = read_csr(sepc);
+  proc->trapframe->epc = read_csr(sepc);
 
   // if the cause of trap is syscall from user application.
   // read_csr() and CAUSE_USER_ECALL are macros defined in kernel/riscv.h
@@ -89,7 +91,7 @@ void smode_trap_handler(void) {
   // use switch-case instead of if-else, as there are many cases since lab2_3.
   switch (cause) {
     case CAUSE_USER_ECALL:
-      handle_syscall(current->trapframe);
+      handle_syscall(proc->trapframe);
       break;
     case CAUSE_MTIMER_S_TRAP:
       handle_mtimer_trap();
@@ -108,5 +110,5 @@ void smode_trap_handler(void) {
   }
 
   // continue (come back to) the execution of current process.
-  switch_to(current);
+  switch_to(proc);
 }

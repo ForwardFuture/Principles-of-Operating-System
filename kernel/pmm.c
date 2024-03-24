@@ -36,7 +36,12 @@ static void create_freepage_list(uint64 start, uint64 end) {
 //
 // place a physical page at *pa to the free list of g_free_mem_list (to reclaim the page)
 //
+static volatile int freeing_tag = 0;
 void free_page(void *pa) {
+
+  while(freeing_tag);
+  freeing_tag += 1;
+
   if (((uint64)pa % PGSIZE) != 0 || (uint64)pa < free_mem_start_addr || (uint64)pa >= free_mem_end_addr)
     panic("free_page 0x%lx \n", pa);
 
@@ -44,19 +49,30 @@ void free_page(void *pa) {
   list_node *n = (list_node *)pa;
   n->next = g_free_mem_list.next;
   g_free_mem_list.next = n;
+
+  freeing_tag -= 1;
 }
 
 //
 // takes the first free page from g_free_mem_list, and returns (allocates) it.
 // Allocates only ONE page!
 //
+static volatile int allocating_tag = 0;
 void *alloc_page(void) {
+
+  while(allocating_tag);
+  allocating_tag += 1;
+
+  int hartid = read_tp();
+
   list_node *n = g_free_mem_list.next;
-  uint64 hartid = 0;
   if (vm_alloc_stage[hartid]) {
     sprint("hartid = %ld: alloc page 0x%x\n", hartid, n);
   }
   if (n) g_free_mem_list.next = n->next;
+
+  allocating_tag -= 1;
+
   return (void *)n;
 }
 
