@@ -58,11 +58,8 @@ void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
       // dynamically increase application stack.
       // hint: first allocate a new physical page, and then, maps the new page to the
       // virtual address that causes the page fault.
-      void *pa = alloc_page();
-
-      int sym = map_pages(current->pagetable, ROUNDDOWN(stval, PGSIZE), PGSIZE, (uint64)pa, prot_to_type(PROT_READ | PROT_WRITE, 1));
-      
-      if(sym == -1)panic("map_pages fails due to lack of physical pages!\n");
+      if(map_pages(current->pagetable, ROUNDDOWN(stval, PGSIZE), PGSIZE, (uint64)alloc_page(), 
+          prot_to_type(PROT_READ | PROT_WRITE, 1)) == -1)panic("map_pages fails due to lack of physical pages!\n");
       break;
     default:
       sprint("unknown page fault.\n");
