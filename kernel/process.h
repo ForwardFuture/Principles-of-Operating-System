@@ -106,4 +106,10 @@ int do_fork(process* parent);
 // current running process
 extern process* current;
 
+extern int proc_num;
+extern process* proc[5];
+
+extern int semaphore_num;
+extern int semaphore[5];
+
 #endif
