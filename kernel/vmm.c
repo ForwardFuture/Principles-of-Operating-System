@@ -38,6 +38,7 @@ uint64 prot_to_type(int prot, int user) {
   if (prot & PROT_READ) perm |= PTE_R | PTE_A;
   if (prot & PROT_WRITE) perm |= PTE_W | PTE_D;
   if (prot & PROT_EXEC) perm |= PTE_X | PTE_A;
+  if (prot & PROT_RSW) perm |= PTE_RSW;
   if (perm == 0) perm = PTE_R;
   if (user) perm |= PTE_U;
   return perm;

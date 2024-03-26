@@ -9,6 +9,7 @@
 #include "pmm.h"
 #include "vmm.h"
 #include "sched.h"
+#include "kernel/memlayout.h"
 #include "util/functions.h"
 
 #include "spike_interface/spike_utils.h"
@@ -58,9 +59,21 @@ void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
       // dynamically increase application stack.
       // hint: first allocate a new physical page, and then, maps the new page to the
       // virtual address that causes the page fault.
-      if(map_pages(current->pagetable, ROUNDDOWN(stval, PGSIZE), PGSIZE, (uint64)alloc_page(), 
-          prot_to_type(PROT_READ | PROT_WRITE, 1)) == -1)panic("map_pages fails due to lack of physical pages!\n");
-      break;
+      {
+        pte_t *pte = page_walk(current->pagetable, ROUNDDOWN(stval, PGSIZE), 0);
+        if((*pte) & PTE_RSW) {
+          (*pte) ^= PTE_RSW;
+          (*pte) ^= PTE_V;
+          //sprint("processing copy_on_write....................\n");
+          copy_on_write(ROUNDDOWN(stval, PGSIZE));
+          //sprint("copy_on_write down..........................\n");
+        }
+        else {
+          if(map_pages(current->pagetable, ROUNDDOWN(stval, PGSIZE), PGSIZE, (uint64)alloc_page(), 
+              prot_to_type(PROT_READ | PROT_WRITE, 1)) == -1)panic("map_pages fails due to lack of physical pages!\n");
+        }
+        break;
+      }
     default:
       sprint("unknown page fault.\n");
       break;

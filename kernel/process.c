@@ -211,10 +211,12 @@ int do_fork( process* parent)
             if (free_block_filter[(heap_block - heap_bottom) / PGSIZE])  // skip free blocks
               continue;
 
-            void* child_pa = alloc_page();
-            memcpy(child_pa, (void*)lookup_pa(parent->pagetable, heap_block), PGSIZE);
-            user_vm_map((pagetable_t)child->pagetable, heap_block, PGSIZE, (uint64)child_pa,
-                        prot_to_type(PROT_WRITE | PROT_READ, 1));
+            // heap page allocate & copy
+            //void* child_pa = alloc_page();
+            //memcpy(child_pa, (void*)lookup_pa(parent->pagetable, heap_block), PGSIZE);
+            // heap page mappings
+            user_vm_map((pagetable_t)child->pagetable, heap_block, PGSIZE, lookup_pa(parent->pagetable, heap_block),
+                prot_to_type(PROT_READ | PROT_RSW, 1));
           }
 
           child->mapped_info[HEAP_SEGMENT].npages = parent->mapped_info[HEAP_SEGMENT].npages;
@@ -233,6 +235,8 @@ int do_fork( process* parent)
         // address region of child to the physical pages that actually store the code
         // segment of parent process.
         // DO NOT COPY THE PHYSICAL PAGES, JUST MAP THEM.
+        sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n", 
+            (uint64)user_va_to_pa(parent->pagetable, (void *)parent->mapped_info[i].va), parent->mapped_info[i].va);
         user_vm_map((pagetable_t)child->pagetable, parent->mapped_info[i].va, PGSIZE * parent->mapped_info[i].npages, 
             (uint64)user_va_to_pa(parent->pagetable, (void *)parent->mapped_info[i].va), prot_to_type(PROT_READ | PROT_EXEC, 1));
 
@@ -252,4 +256,19 @@ int do_fork( process* parent)
   insert_to_ready_queue( child );
 
   return child->pid;
+}
+
+
+void copy_on_write(uint64 va) {
+
+  void* child_pa = alloc_page();
+
+  //sprint("child physical address = %lx\n", (uint64)child_pa);
+  //sprint("parent physical address = %lx\n", (uint64)lookup_pa(parent->pagetable, heap_block));
+
+  memcpy(child_pa, (void*)lookup_pa(current->parent->pagetable, va), PGSIZE);
+  // heap page mappings
+  user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)child_pa,
+      prot_to_type(PROT_READ | PROT_WRITE, 1));
+  
 }
